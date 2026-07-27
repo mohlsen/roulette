@@ -1,0 +1,19 @@
+{
+  "name": "roulette-wheel",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "physics": "node src/physics/headless.js",
+    "fairness": "node src/physics/headless.js --fairness"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  },
+  "dependencies": {
+    "three": "^0.169.0"
+  }
+}

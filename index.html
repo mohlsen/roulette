@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Roulette" />
+    <meta name="theme-color" content="#0a0a0c" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+    <title>Roulette</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0a0a0c;
+        --ink: #f4efe4;
+        --muted: #9aa0a6;
+        --brass: #e8c66a;
+        --brass-dim: #b8934a;
+        --red: #e23b3b;
+        --green: #25c268;
+        --black-tile: #17171c;
+        --tile: rgba(9, 9, 12, 0.82);
+        --tile-line: rgba(255, 255, 255, 0.1);
+        --num: 'Arial Narrow', 'Roboto Condensed', 'Helvetica Neue', system-ui, sans-serif;
+        --ui: system-ui, -apple-system, 'Segoe UI', sans-serif;
+        --panel-w: clamp(240px, 24vw, 340px);
+        --panel-gap: 14px;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--ink);
+        position: fixed;
+        inset: 0;
+        font-family: var(--ui);
+        touch-action: manipulation;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+        overscroll-behavior: none;
+      }
+      #scene {
+        display: block;
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      /* ---------- Right-side billboard column ---------- */
+      #panel {
+        position: fixed;
+        top: calc(env(safe-area-inset-top, 0px) + 14px);
+        right: calc(env(safe-area-inset-right, 0px) + var(--panel-gap));
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+        width: var(--panel-w);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        z-index: 5;
+      }
+      .tile {
+        background: var(--tile);
+        border: 1px solid var(--tile-line);
+        border-radius: 16px;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+      }
+
+      /* Result box (upper-right) */
+      #result-box {
+        padding: 14px 20px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        border-width: 2px;
+        transition: border-color 0.3s, box-shadow 0.3s;
+      }
+      #result-label {
+        font-size: 12px;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 2px;
+      }
+      #result-num {
+        font-family: var(--num);
+        font-weight: 800;
+        font-size: clamp(58px, 9vw, 118px);
+        line-height: 0.92;
+        font-stretch: condensed;
+        letter-spacing: 0.01em;
+      }
+      #result-props {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+        margin-top: 8px;
+        min-height: 24px;
+      }
+      .chip {
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid var(--tile-line);
+        color: var(--ink);
+      }
+
+      /* History */
+      #history-box {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 12px 12px 4px;
+      }
+      .box-title {
+        font-size: 12px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 0 4px 8px;
+      }
+      #history-list {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-bottom: 8px;
+        scrollbar-width: thin;
+      }
+      #history-list::-webkit-scrollbar {
+        width: 5px;
+      }
+      #history-list::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.12);
+        border-radius: 3px;
+      }
+      .hrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 8px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .hrow:first-child {
+        background: rgba(232, 198, 106, 0.1);
+        outline: 1px solid rgba(232, 198, 106, 0.35);
+      }
+      .hnum {
+        font-family: var(--num);
+        font-weight: 800;
+        font-stretch: condensed;
+        font-size: 26px;
+        min-width: 46px;
+        text-align: center;
+        border-radius: 8px;
+        padding: 2px 6px;
+        color: #fff;
+      }
+      .hmeta {
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.04em;
+      }
+      .red-bg {
+        background: var(--red);
+      }
+      .black-bg {
+        background: var(--black-tile);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+      }
+      .green-bg {
+        background: var(--green);
+      }
+
+      /* Stats */
+      #stats-box {
+        flex: 0 0 auto;
+      }
+      #stats-toggle {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-family: var(--ui);
+        font-size: 12px;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        padding: 12px 14px;
+        cursor: pointer;
+      }
+      #stats-body {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px 14px;
+        padding: 0 14px 14px;
+        font-size: 13px;
+      }
+      #stats-box.collapsed #stats-body {
+        display: none;
+      }
+      .stat {
+        display: flex;
+        justify-content: space-between;
+        color: var(--ink);
+      }
+      .stat span:first-child {
+        color: var(--muted);
+      }
+      .stat.wide {
+        grid-column: 1 / -1;
+      }
+
+      /* Dealer controls */
+      #dealer {
+        display: flex;
+        gap: 10px;
+        flex: 0 0 auto;
+      }
+      .ghost {
+        flex: 1;
+        font-family: var(--ui);
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--tile-line);
+        border-radius: 12px;
+        padding: 12px;
+        cursor: pointer;
+      }
+      .ghost.danger {
+        color: #e58;
+      }
+      .ghost:active {
+        background: rgba(255, 255, 255, 0.09);
+      }
+
+      /* ---------- SPIN control (under the wheel) ---------- */
+      #controls {
+        position: fixed;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+        /* centre under the wheel, i.e. the region left of the panel */
+        left: calc((100vw - var(--panel-w) - var(--panel-gap)) / 2);
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        z-index: 5;
+      }
+      #spin {
+        font-family: var(--ui);
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+        color: #1a1205;
+        background: linear-gradient(180deg, #f3d888, var(--brass) 60%, var(--brass-dim));
+        border: none;
+        border-radius: 14px;
+        padding: 16px 52px;
+        cursor: pointer;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+      }
+      #spin:disabled {
+        filter: grayscale(0.6) brightness(0.6);
+        cursor: default;
+      }
+      #mute {
+        width: 52px;
+        height: 52px;
+        font-size: 22px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--tile-line);
+        color: var(--ink);
+        cursor: pointer;
+      }
+
+      /* Dev HUD replaced by the triple-tap debug panel; kept for internal use. */
+      #hud {
+        display: none;
+        position: fixed;
+        left: 12px;
+        top: calc(env(safe-area-inset-top, 0px) + 10px);
+        font-family: ui-monospace, Menlo, monospace;
+        font-size: 11px;
+        color: rgba(154, 160, 166, 0.6);
+        pointer-events: none;
+        z-index: 6;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .tile,
+        #result-box {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+
+    <aside id="panel">
+      <section id="result-box" class="tile">
+        <div id="result-label">Winning Number</div>
+        <div id="result-num">–</div>
+        <div id="result-props"></div>
+      </section>
+
+      <section id="history-box" class="tile">
+        <div class="box-title">Previous</div>
+        <div id="history-list"></div>
+      </section>
+
+      <section id="stats-box" class="tile collapsed">
+        <button id="stats-toggle"><span>Session Stats</span><span id="stats-caret">▸</span></button>
+        <div id="stats-body"></div>
+      </section>
+
+      <div id="dealer">
+        <button id="void" class="ghost">Void Last</button>
+        <button id="reset" class="ghost danger">Reset</button>
+      </div>
+    </aside>
+
+    <div id="controls">
+      <button id="spin">SPIN</button>
+    </div>
+
+    <div id="hud"></div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

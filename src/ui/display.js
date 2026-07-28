@@ -15,7 +15,7 @@ const GLOW = {
   black: '0 0 40px rgba(255,255,255,0.12)',
 };
 
-export function createDisplay() {
+export function createDisplay(config) {
   const box = document.getElementById('result-box');
   const numEl = document.getElementById('result-num');
   const propsEl = document.getElementById('result-props');
@@ -29,6 +29,15 @@ export function createDisplay() {
   }
 
   function show(value) {
+    if (config.mode === 'bigwheel') {
+      // Only the number matters in Big Wheel mode — no color/parity meaning.
+      numEl.textContent = String(value);
+      numEl.style.color = 'var(--ink)';
+      propsEl.innerHTML = '';
+      box.style.borderColor = 'var(--tile-line)';
+      box.style.boxShadow = 'none';
+      return;
+    }
     const p = propsOf(value);
     numEl.textContent = String(value);
     numEl.style.color = COLOR_HEX[p.color];

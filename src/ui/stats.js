@@ -1,6 +1,7 @@
-// Collapsible session stats panel.
+// Collapsible session stats panel. Big Wheel mode drops every roulette-only
+// category (color/parity/range/dozens) since only the number matters there.
 
-export function createStats(session) {
+export function createStats(session, config) {
   const box = document.getElementById('stats-box');
   const toggle = document.getElementById('stats-toggle');
   const caret = document.getElementById('stats-caret');
@@ -13,8 +14,18 @@ export function createStats(session) {
 
   function render() {
     const s = session.stats();
-    const pct = (n) => (s.total ? Math.round((n / s.total) * 100) : 0);
     const fmt = (v) => v.map((f) => f.value).join(' ');
+
+    if (config.mode === 'bigwheel') {
+      body.innerHTML = `
+        ${statWide('Spins', s.total)}
+        ${statWide('Hot', s.total ? fmt(s.hot) : '—')}
+        ${statWide('Cold', s.total ? fmt(s.cold) : '—')}
+      `;
+      return;
+    }
+
+    const pct = (n) => (s.total ? Math.round((n / s.total) * 100) : 0);
     body.innerHTML = `
       ${stat('Spins', s.total)}
       ${stat('Green', `${s.green}`)}

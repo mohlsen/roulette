@@ -3,12 +3,12 @@
 
 import { runSpin } from './simulate.js';
 import { makeRng, freshSeed } from './rng.js';
-import { getLayout } from '../data/layouts.js';
+import { getActiveLayout } from '../data/layouts.js';
 
 // Run N spins and collect per-pocket counts + spin metrics.
 export function batch(cfg, n, seed = freshSeed()) {
   const rng = makeRng(seed);
-  const layout = getLayout(cfg.wheelType);
+  const layout = getActiveLayout(cfg).values;
   const N = layout.length;
   const counts = new Array(N).fill(0);
 

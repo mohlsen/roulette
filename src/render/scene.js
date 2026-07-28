@@ -57,6 +57,22 @@ export function createScene(canvas) {
   return { renderer, scene, camera, pmrem };
 }
 
+// Recursively dispose geometries/materials/textures under a subtree. Needed
+// when the settings panel rebuilds the wheel for a new mode/space-count —
+// three.js doesn't garbage-collect GPU resources on its own.
+export function disposeObject3D(root) {
+  root.traverse((obj) => {
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material) {
+      const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const m of materials) {
+        if (m.map) m.map.dispose();
+        m.dispose();
+      }
+    }
+  });
+}
+
 function makeRadialShadowTexture() {
   const size = 256;
   const c = document.createElement('canvas');

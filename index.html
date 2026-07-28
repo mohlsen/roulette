@@ -306,6 +306,113 @@
         cursor: pointer;
       }
 
+      /* ---------- Settings (gear icon + modal) ---------- */
+      #settings-btn {
+        position: fixed;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+        left: calc(env(safe-area-inset-left, 0px) + 22px);
+        width: 52px;
+        height: 52px;
+        font-size: 22px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--tile-line);
+        color: var(--ink);
+        cursor: pointer;
+        z-index: 5;
+      }
+      #settings-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #settings-overlay.hidden {
+        display: none;
+      }
+      #settings-card {
+        width: min(420px, 86vw);
+        background: rgba(14, 14, 18, 0.98);
+        border: 1px solid var(--tile-line);
+        border-radius: 18px;
+        padding: 22px;
+      }
+      #settings-card h2 {
+        font-size: 14px;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 16px;
+      }
+      .settings-label {
+        display: block;
+        font-size: 12px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin: 16px 0 8px;
+      }
+      .seg {
+        display: flex;
+        gap: 8px;
+      }
+      .seg-btn {
+        flex: 1;
+        font-family: var(--ui);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--tile-line);
+        border-radius: 10px;
+        padding: 12px 8px;
+        cursor: pointer;
+      }
+      .seg-btn.active {
+        color: #1a1205;
+        background: var(--brass);
+        border-color: var(--brass);
+      }
+      #bigwheel-opts.hidden,
+      #roulette-opts.hidden {
+        display: none;
+      }
+      #spaces-input {
+        width: 100%;
+        margin-top: 4px;
+        font-family: var(--ui);
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--tile-line);
+        border-radius: 10px;
+        padding: 10px 14px;
+      }
+      .settings-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 22px;
+      }
+      #settings-apply {
+        flex: 1;
+        font-family: var(--ui);
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #1a1205;
+        background: var(--brass);
+        border: none;
+        border-radius: 10px;
+        padding: 13px;
+        cursor: pointer;
+      }
+
       /* Dev HUD replaced by the triple-tap debug panel; kept for internal use. */
       #hud {
         display: none;
@@ -354,6 +461,37 @@
 
     <div id="controls">
       <button id="spin">SPIN</button>
+    </div>
+
+    <button id="settings-btn" title="Settings">⚙</button>
+    <div id="settings-overlay" class="hidden">
+      <div id="settings-card">
+        <h2>Wheel Settings</h2>
+
+        <span class="settings-label">Mode</span>
+        <div class="seg" id="mode-seg">
+          <button data-mode="roulette" class="seg-btn active">Roulette</button>
+          <button data-mode="bigwheel" class="seg-btn">Big Wheel</button>
+        </div>
+
+        <div id="roulette-opts">
+          <span class="settings-label">Wheel Type</span>
+          <div class="seg" id="wheeltype-seg">
+            <button data-wheeltype="american" class="seg-btn active">American</button>
+            <button data-wheeltype="european" class="seg-btn">European</button>
+          </div>
+        </div>
+
+        <div id="bigwheel-opts" class="hidden">
+          <span class="settings-label">Number of Spaces (2–100)</span>
+          <input type="number" id="spaces-input" min="2" max="100" value="10" />
+        </div>
+
+        <div class="settings-actions">
+          <button id="settings-cancel" class="ghost">Cancel</button>
+          <button id="settings-apply">Apply</button>
+        </div>
+      </div>
     </div>
 
     <div id="hud"></div>

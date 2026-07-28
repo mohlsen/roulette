@@ -6,7 +6,7 @@
 // The winning number is NEVER chosen. Randomness enters at launch and in per-bounce
 // scatter; the pocket is read from the ball's final angle relative to the rotor.
 
-import { getLayout } from '../data/layouts.js';
+import { getActiveLayout } from '../data/layouts.js';
 
 export const PHASE = {
   TRACK: 0, // ball riding the banked outer track
@@ -179,7 +179,7 @@ export function step(state, cfg, rng) {
     if (state.r_b <= geom.pocketOuterRadius) {
       state.r_b = geom.pocketOuterRadius;
       state.phase = PHASE.FRET;
-      const pocketWidth = TWO_PI / getLayout(cfg.wheelType).length;
+      const pocketWidth = TWO_PI / getActiveLayout(cfg).values.length;
       state._lastFretIndex = Math.floor(wrap2pi(state.theta_b - state.theta_r) / pocketWidth);
       state._calmTime = 0;
     }
@@ -187,7 +187,7 @@ export function step(state, cfg, rng) {
   }
 
   if (state.phase === PHASE.FRET) {
-    const layout = getLayout(cfg.wheelType);
+    const layout = getActiveLayout(cfg).values;
     const N = layout.length;
     const pocketWidth = TWO_PI / N;
 

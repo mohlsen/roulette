@@ -4,7 +4,7 @@
 // under the ball is exactly the sim's pocketIndex = floor((theta_b - theta_r)/w).
 
 import * as THREE from 'three';
-import { getLayout, colorOf } from '../data/layouts.js';
+import { getActiveLayout } from '../data/layouts.js';
 
 const TWO_PI = Math.PI * 2;
 
@@ -40,7 +40,7 @@ export function surfaceHeight(r, geom) {
 
 export function createWheel(config) {
   const geom = config.geom;
-  const layout = getLayout(config.wheelType);
+  const { values: layout, colorKeys } = getActiveLayout(config);
   const N = layout.length;
   const w = TWO_PI / N;
 
@@ -91,7 +91,7 @@ export function createWheel(config) {
   root.add(rotorGroup);
 
   // Baked top-down texture: coloured pockets + numbers, aligned via toXZ.
-  const faceTex = makeRotorFaceTexture(layout, N, w, geom);
+  const faceTex = makeRotorFaceTexture(layout, colorKeys, N, w, geom);
   const faceR = geom.pocketOuterRadius;
   const faceGeo = new THREE.CircleGeometry(faceR, 128);
   // Planar UVs centred on the disc (CircleGeometry already provides these).
@@ -157,7 +157,7 @@ export function createWheel(config) {
 }
 
 // ---- Baked rotor-face texture --------------------------------------------
-function makeRotorFaceTexture(layout, N, w, geom) {
+function makeRotorFaceTexture(layout, colorKeys, N, w, geom) {
   const size = 2048;
   const c = document.createElement('canvas');
   c.width = c.height = size;
@@ -173,13 +173,33 @@ function makeRotorFaceTexture(layout, N, w, geom) {
 
   const prIn = pr(geom.pocketInnerRadius);
   const prOut = pr(geom.pocketOuterRadius) - 4;
-  const prNum = pr(geom.pocketInnerRadius + (geom.pocketOuterRadius - geom.pocketInnerRadius) * 0.72);
+  const numFrac = 0.5; // centre of the pocket band — maximises headroom before clipping either edge
+  const prNum = pr(geom.pocketInnerRadius + (geom.pocketOuterRadius - geom.pocketInnerRadius) * numFrac);
+
+  // Size the font to fill whatever room is actually available, in BOTH
+  // directions — tangential (per-pocket arc width) and radial (pocket band
+  // height) — rather than a fixed size that leaves small wheels (fewer, wider
+  // pockets) looking under-filled. Measured against the widest label so every
+  // pocket on a given wheel shares one consistent size.
+  const bandPx = pr(geom.pocketOuterRadius) - pr(geom.pocketInnerRadius);
+  const maxLabel = layout.reduce((longest, v) => (String(v).length > longest.length ? String(v) : longest), '0');
+  const refSize = 100;
+  ctx.font = `bold ${refSize}px "Arial Narrow", Arial, sans-serif`;
+  const refWidth = ctx.measureText(maxLabel).width;
+
+  const arcLen = (TWO_PI * prNum) / N;
+  const widthLimit = (refSize * (arcLen * 0.82)) / refWidth; // font size that just fits the arc
+  // Text is vertically centred at prNum, so it has `bandPx * numFrac` of room on
+  // each side before it clips the inner or outer edge — use the smaller margin.
+  const radialMargin = bandPx * Math.min(numFrac, 1 - numFrac);
+  const heightLimit = radialMargin * 2 * 0.8; // *2 for both sides, 0.8 safety margin
+  const fontSize = Math.max(20, Math.min(260, Math.min(widthLimit, heightLimit)));
 
   for (let k = 0; k < N; k++) {
     const a0 = k * w;
     const a1 = (k + 1) * w;
     const value = layout[k];
-    const col = colorOf(value);
+    const col = colorKeys[k];
     const fill = col === 'red' ? '#9a1f1f' : col === 'green' ? '#0c6b34' : '#0d0d10';
 
     // Coloured pocket wedge (canvas arc angles match the toXZ / UV convention).
@@ -197,7 +217,7 @@ function makeRotorFaceTexture(layout, N, w, geom) {
     ctx.translate(cx + prNum * Math.cos(ac), cy + prNum * Math.sin(ac));
     ctx.rotate(ac + Math.PI / 2); // text reads pointing inward->outward
     ctx.fillStyle = '#f4efe4';
-    ctx.font = 'bold 92px "Arial Narrow", Arial, sans-serif';
+    ctx.font = `bold ${fontSize}px "Arial Narrow", Arial, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(value), 0, 0);

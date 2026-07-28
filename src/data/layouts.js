@@ -53,3 +53,40 @@ export function propsOf(value) {
     column: ((n - 1) % 3) + 1,
   };
 }
+
+// --- Big Wheel mode --------------------------------------------------------
+// A configurable N-space wheel (2..100), numbered 1..N sequentially. Only the
+// number matters here — no parity/color/dozen meaning. Colors are purely
+// decorative: greedily assigned from a 3-color palette so no two adjacent
+// segments share a color, INCLUDING the wrap-around from the last space back
+// to the first (a plain 2-color alternation can't do this when N is odd —
+// that's an odd cycle, which needs a 3rd color to break the seam).
+const BIG_WHEEL_PALETTE = ['red', 'black', 'green'];
+
+export function bigWheelValues(n) {
+  return Array.from({ length: n }, (_, i) => i + 1);
+}
+
+export function bigWheelColorKeys(n) {
+  const keys = [];
+  for (let i = 0; i < n; i++) {
+    const isLast = i === n - 1;
+    const prev = keys[i - 1];
+    const first = keys[0];
+    const pick = BIG_WHEEL_PALETTE.find((c) => c !== prev && !(isLast && c === first));
+    keys.push(pick ?? BIG_WHEEL_PALETTE[0]);
+  }
+  return keys;
+}
+
+// Unified pocket data for whichever mode is active. Both physics (which only
+// needs `values` + its length) and the renderer (which also needs a color per
+// index) read the wheel through this single function.
+export function getActiveLayout(config) {
+  if (config.mode === 'bigwheel') {
+    const n = config.bigWheel.spaces;
+    return { values: bigWheelValues(n), colorKeys: bigWheelColorKeys(n) };
+  }
+  const values = getLayout(config.wheelType);
+  return { values, colorKeys: values.map(colorOf) };
+}

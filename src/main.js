@@ -5,7 +5,7 @@ import { config } from './config.js';
 import { createState, initSpin, step, PHASE } from './physics/simulate.js';
 import { makeRng, freshSeed } from './physics/rng.js';
 import { propsOf } from './data/layouts.js';
-import { createScene, fitCamera } from './render/scene.js';
+import { createScene, fitCamera, disposeObject3D } from './render/scene.js';
 import { createWheel } from './render/wheel.js';
 import { createBall } from './render/ball.js';
 import { createSession } from './ui/session.js';
@@ -13,22 +13,41 @@ import { createDisplay } from './ui/display.js';
 import { createHistory } from './ui/history.js';
 import { createStats } from './ui/stats.js';
 import { createDebug } from './ui/debug.js';
+import { loadPersistedSettings, createSettingsPanel } from './ui/settings.js';
+
+// Restore a host's saved mode/space-count BEFORE building anything, so a
+// mid-event refresh comes back the way it was left, not the roulette default.
+loadPersistedSettings(config);
 
 const canvas = document.getElementById('scene');
 const hud = document.getElementById('hud');
 const spinBtn = document.getElementById('spin');
 
 const { renderer, scene, camera } = createScene(canvas);
-const wheel = createWheel(config);
-scene.add(wheel.root);
-const ball = createBall(config, wheel.surfaceHeight);
-scene.add(ball.mesh);
+
+let wheel, ball;
+function buildWheelAndBall() {
+  if (wheel) {
+    scene.remove(wheel.root);
+    disposeObject3D(wheel.root);
+  }
+  if (ball) {
+    scene.remove(ball.mesh);
+    ball.mesh.geometry.dispose();
+    ball.mesh.material.dispose();
+  }
+  wheel = createWheel(config);
+  scene.add(wheel.root);
+  ball = createBall(config, wheel.surfaceHeight);
+  scene.add(ball.mesh);
+}
+buildWheelAndBall();
 
 // --- UI + session ----------------------------------------------------------
-const session = createSession(config.wheelType);
-const display = createDisplay();
-createHistory(session);
-createStats(session);
+const session = createSession(config);
+const display = createDisplay(config);
+createHistory(session, config);
+createStats(session, config);
 
 // --- Sim state -------------------------------------------------------------
 const state = createState();
@@ -81,7 +100,7 @@ function onSettled() {
   camFocusTarget = 1; // zoom in on the winning pocket and hold
   session.record(state.winningNumber); // -> updates display, history, stats, persists
   display.show(state.winningNumber);
-  console.log('Result:', state.winningNumber, propsOf(state.winningNumber));
+  console.log('Result:', state.winningNumber, config.mode === 'bigwheel' ? '' : propsOf(state.winningNumber));
 }
 
 // --- Controls --------------------------------------------------------------
@@ -200,8 +219,9 @@ function frame(now) {
     ballZ: focusZ,
   });
 
+  const modeLabel = config.mode === 'bigwheel' ? `bigwheel-${config.bigWheel.spaces}` : config.wheelType;
   hud.textContent =
-    `${config.wheelType} ${phaseName(state.phase)} r:${state.r_b.toFixed(3)} ` +
+    `${modeLabel} ${phaseName(state.phase)} r:${state.r_b.toFixed(3)} ` +
     `rev:${state.revBeforeDrop.toFixed(1)} def:${state.deflectorHits} fret:${state.fretHits} t:${state.t.toFixed(1)}s`;
 
   renderer.render(scene, camera);
@@ -211,12 +231,33 @@ function phaseName(p) {
   return ['track', 'descent', 'fret', 'settled'][p] ?? 'idle';
 }
 
-// Rest state before the first spin.
-initSpin(state, config, rng);
-state.phase = -1;
-ball.reset(state);
-ball.update(state, 0);
+// Park the ball at rest on the track — used at startup and after a settings
+// change (new mode/space-count means a fresh layout to rest on).
+function resetToIdle() {
+  rng = makeRng(freshSeed());
+  initSpin(state, config, rng);
+  state.phase = -1;
+  idle = true;
+  ball.reset(state);
+  ball.update(state, 0);
+}
+resetToIdle();
 requestAnimationFrame(frame);
+
+// --- Settings (gear icon): switch Roulette <-> Big Wheel, pick space count -
+createSettingsPanel({
+  config,
+  isSpinning: () => spinning,
+  onApply: () => {
+    buildWheelAndBall();
+    resetToIdle();
+    session.reset(); // dozens/color/parity stats don't carry across mode changes
+    display.clear();
+    camPush = camPushTarget = 0;
+    camFocus = camFocusTarget = 0;
+    focusX = focusZ = 0;
+  },
+});
 
 // Run one spin to its result without waiting for real time (used by the debug
 // panel's "force spins" button and the dev hook).

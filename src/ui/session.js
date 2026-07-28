@@ -1,12 +1,14 @@
 // Session state: history + derived stats, persisted to localStorage after every
 // spin. Wrapped in try/catch with an in-memory fallback (private browsing throws).
 
-import { colorOf, propsOf, getLayout } from '../data/layouts.js';
+import { propsOf, getActiveLayout } from '../data/layouts.js';
 
 const KEY = 'roulette.session.v1';
 
-export function createSession(wheelType) {
-  const layout = getLayout(wheelType);
+// `config` is the shared, mutable config object — read fresh on every stats()
+// call so a mode/space-count change (which resets the session) is reflected
+// immediately without needing to recreate this module.
+export function createSession(config) {
   let history = load();
   const listeners = new Set();
 
@@ -45,7 +47,7 @@ export function createSession(wheelType) {
       return () => listeners.delete(fn);
     },
     record(value) {
-      history.unshift({ value, color: colorOf(value) });
+      history.unshift({ value });
       persist();
       notify();
     },
@@ -62,13 +64,13 @@ export function createSession(wheelType) {
       notify();
     },
     stats() {
-      return computeStats(history, layout);
+      return computeStats(history, getActiveLayout(config).values, config.mode);
     },
   };
   return api;
 }
 
-function computeStats(history, layout) {
+function computeStats(history, layout, mode) {
   const s = {
     total: history.length,
     red: 0,
@@ -82,19 +84,24 @@ function computeStats(history, layout) {
     counts: new Map(),
   };
   for (const h of history) {
-    const p = propsOf(h.value);
-    if (p.color === 'red') s.red++;
-    else if (p.color === 'black') s.black++;
-    else s.green++;
-    if (p.parity === 'odd') s.odd++;
-    else if (p.parity === 'even') s.even++;
-    if (p.range === 'low') s.low++;
-    else if (p.range === 'high') s.high++;
-    if (p.dozen) s.dozen[p.dozen - 1]++;
     s.counts.set(h.value, (s.counts.get(h.value) || 0) + 1);
+    if (mode !== 'bigwheel') {
+      // Colour/parity/dozen/column only carry meaning in roulette mode — a Big
+      // Wheel spin is just a number, so skip these entirely there.
+      const p = propsOf(h.value);
+      if (p.color === 'red') s.red++;
+      else if (p.color === 'black') s.black++;
+      else s.green++;
+      if (p.parity === 'odd') s.odd++;
+      else if (p.parity === 'even') s.even++;
+      if (p.range === 'low') s.low++;
+      else if (p.range === 'high') s.high++;
+      if (p.dozen) s.dozen[p.dozen - 1]++;
+    }
   }
 
   // Hot / cold across all pockets (unseen numbers count as 0 -> coldest).
+  // Generic to any layout, so it works the same for roulette and Big Wheel.
   const freq = layout.map((v) => ({ value: v, n: s.counts.get(v) || 0 }));
   const hot = [...freq].sort((a, b) => b.n - a.n).filter((f) => f.n > 0).slice(0, 4);
   const cold = [...freq].sort((a, b) => a.n - b.n).slice(0, 4);

@@ -3,7 +3,11 @@
 // mutate one place and have everything respond.
 
 export const config = {
-  wheelType: 'american', // 'american' | 'european'
+  mode: 'roulette', // 'roulette' | 'bigwheel'
+  wheelType: 'american', // 'american' | 'european' (used when mode === 'roulette')
+  bigWheel: {
+    spaces: 10, // 2..100 (used when mode === 'bigwheel')
+  },
 
   // --- Geometry (metres) ---------------------------------------------------
   geom: {

@@ -90,14 +90,17 @@ function makeRadialShadowTexture() {
 }
 
 // Straight TOP-DOWN framing (no isometric tilt). The whole wheel is fit into the
-// space LEFT of the right-hand panel so it never sits behind the UI. Derived from
-// the panel's actual width (matches the CSS clamp) so it adapts to any aspect.
+// space LEFT of the right-hand panel so it never sits behind the UI.
 //
-// opts.push  (0..1) — subtle push-in as the ball leaves the track.
-// opts.focus (0..1) — after the ball settles, zoom in hard and recentre on the
-//                     winning pocket (opts.ballX/ballZ, followed as the rotor turns).
+// opts.push       (0..1) — subtle push-in as the ball leaves the track.
+// opts.focus      (0..1) — after the ball settles, zoom in hard and recentre on
+//                           the winning pocket (opts.ballX/ballZ, followed as
+//                           the rotor turns).
+// opts.panelWidthPx — the right-hand panel's actual rendered width in CSS px
+//                      (measured from the DOM, not recomputed here) so this
+//                      stays correct across breakpoints/layouts automatically.
 export function fitCamera(camera, aspect, opts = {}) {
-  const { push = 0, focus = 0, ballX = 0, ballZ = 0 } = opts;
+  const { push = 0, focus = 0, ballX = 0, ballZ = 0, panelWidthPx = 340 } = opts;
   camera.aspect = aspect;
   camera.fov = 30;
   const fovY = (camera.fov * Math.PI) / 180;
@@ -105,9 +108,7 @@ export function fitCamera(camera, aspect, opts = {}) {
   const tanX = tanY * aspect;
 
   const W = typeof window !== 'undefined' ? window.innerWidth : 1180;
-  // Panel width matches the CSS: clamp(240, 24vw, 340) + margins/gap.
-  const panelW = Math.min(340, Math.max(240, 0.24 * W)) + 34;
-  const f = Math.min(0.55, panelW / W); // right-hand fraction covered by the panel
+  const f = Math.min(0.55, panelWidthPx / W); // right-hand fraction covered by the panel
 
   const R = 0.44; // wheel radius (incl. rim) to keep framed, with margin
   // Top-down: world X spans the screen width, world Z spans the height. Fit both.

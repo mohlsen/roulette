@@ -22,6 +22,7 @@ loadPersistedSettings(config);
 const canvas = document.getElementById('scene');
 const hud = document.getElementById('hud');
 const spinBtn = document.getElementById('spin');
+const panelEl = document.getElementById('panel');
 
 const { renderer, scene, camera } = createScene(canvas);
 
@@ -70,17 +71,28 @@ let camFocusTarget = 0;
 let focusX = 0; // frozen winning-pocket position the focus zoom looks at
 let focusZ = 0;
 
+// Reserved right-hand width, measured from the DOM rather than duplicated as a
+// JS formula — automatically correct across the tablet/mobile CSS breakpoints,
+// re-measured only on resize (not per-frame, to avoid layout thrashing).
+let panelWidthPx = 340;
+function measurePanel() {
+  panelWidthPx = window.innerWidth - panelEl.getBoundingClientRect().left;
+}
+
 function resize() {
   const w = window.innerWidth;
   const h = window.innerHeight;
   renderer.setSize(w, h, false);
-  fitCamera(camera, w / h);
+  measurePanel();
+  fitCamera(camera, w / h, { panelWidthPx });
 }
 window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', resize);
 resize();
 
 function startSpin() {
   if (spinning) return;
+  closeMobileSheets();
   requestWakeLock(); // triggered by a user gesture, as iOS requires
   rng = makeRng(freshSeed());
   initSpin(state, config, rng);
@@ -122,6 +134,34 @@ document.getElementById('reset').addEventListener('click', () => {
     session.reset();
   }
 });
+
+// --- Mobile-only modal cards (Previous / Stats) -----------------------------
+// On tablet these sections are always inline in the sidebar; on a phone-sized
+// viewport (see the CSS breakpoint) they're hidden until opened here, so the
+// wheel stays fully visible by default.
+const historyBox = document.getElementById('history-box');
+const statsBox = document.getElementById('stats-box');
+const mobileBackdrop = document.getElementById('mobile-backdrop');
+
+function closeMobileSheets() {
+  historyBox.classList.remove('mobile-open');
+  statsBox.classList.remove('mobile-open');
+  mobileBackdrop.classList.add('hidden');
+}
+document.getElementById('history-btn').addEventListener('click', () => {
+  statsBox.classList.remove('mobile-open');
+  historyBox.classList.add('mobile-open');
+  mobileBackdrop.classList.remove('hidden');
+});
+document.getElementById('stats-btn').addEventListener('click', () => {
+  historyBox.classList.remove('mobile-open');
+  statsBox.classList.remove('collapsed'); // force-expand the body inside the sheet
+  statsBox.classList.add('mobile-open');
+  mobileBackdrop.classList.remove('hidden');
+});
+document.getElementById('history-close').addEventListener('click', closeMobileSheets);
+document.getElementById('stats-close').addEventListener('click', closeMobileSheets);
+mobileBackdrop.addEventListener('click', closeMobileSheets);
 
 // --- iOS lifecycle: context loss, visibility, wake lock -------------------
 let contextLost = false;
@@ -217,6 +257,7 @@ function frame(now) {
     focus: camFocus,
     ballX: focusX,
     ballZ: focusZ,
+    panelWidthPx,
   });
 
   const modeLabel = config.mode === 'bigwheel' ? `bigwheel-${config.bigWheel.spaces}` : config.wheelType;

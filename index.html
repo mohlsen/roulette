@@ -135,12 +135,27 @@
         flex-direction: column;
         padding: 12px 12px 4px;
       }
+      .box-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 4px 8px;
+      }
       .box-title {
         font-size: 12px;
         letter-spacing: 0.3em;
         text-transform: uppercase;
         color: var(--muted);
-        padding: 0 4px 8px;
+      }
+      .modal-x {
+        display: none; /* shown only in the mobile modal presentation */
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1;
+        padding: 0;
+        cursor: pointer;
       }
       #history-list {
         flex: 1 1 auto;
@@ -203,7 +218,8 @@
         flex: 0 0 auto;
       }
       #stats-toggle {
-        width: 100%;
+        flex: 1;
+        min-width: 0;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -237,6 +253,14 @@
       }
       .stat.wide {
         grid-column: 1 / -1;
+      }
+
+      /* Mobile-only quick-action row (Previous / Stats) — hidden on tablet,
+         where those sections are shown inline in the sidebar instead. */
+      #mobile-actions {
+        display: none;
+        gap: 10px;
+        flex: 0 0 auto;
       }
 
       /* Dealer controls */
@@ -425,6 +449,107 @@
         pointer-events: none;
         z-index: 6;
       }
+      /* Shared dark backdrop behind the mobile History/Stats modal cards. */
+      #mobile-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 44;
+        background: rgba(0, 0, 0, 0.55);
+      }
+      #mobile-backdrop.hidden {
+        display: none;
+      }
+
+      /* ---------- Mobile / landscape-phone layout ----------
+         Triggered by a short viewport (landscape phone) or a narrow one
+         (portrait phone). Tablets (tall+wide, e.g. iPad landscape at
+         1024x768+) never match this, so that layout is untouched. */
+      @media (max-height: 520px), (max-width: 700px) {
+        :root {
+          --panel-w: clamp(120px, 30vw, 190px);
+          --panel-gap: 10px;
+        }
+
+        /* Shrink the winning-number section. */
+        #result-box {
+          padding: 6px 10px 8px;
+        }
+        #result-label {
+          font-size: 9px;
+          letter-spacing: 0.2em;
+          margin-bottom: 0;
+        }
+        #result-num {
+          font-size: clamp(28px, 9vw, 48px);
+        }
+        #result-props {
+          gap: 4px;
+          margin-top: 4px;
+          min-height: 0;
+        }
+        #result-props .chip {
+          font-size: 9px;
+          padding: 2px 6px;
+        }
+
+        /* Previous + Stats become centered modal cards, opened via buttons —
+           solid and opaque (same treatment as the settings modal), not a
+           translucent sheet — so the wheel stays visible around the edges
+           by default and the card itself reads clearly on top of it. */
+        #mobile-actions {
+          display: flex;
+        }
+        #history-box,
+        #stats-box {
+          display: none;
+        }
+        #history-box.mobile-open,
+        #stats-box.mobile-open {
+          display: flex;
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: min(90vw, 420px);
+          max-height: 80vh;
+          background: rgba(14, 14, 18, 0.98);
+          backdrop-filter: none;
+          -webkit-backdrop-filter: none;
+          z-index: 45;
+        }
+        #stats-box.mobile-open #stats-body {
+          display: grid !important; /* override .collapsed while open as a sheet */
+        }
+        #stats-toggle {
+          pointer-events: none; /* the inline caret-collapse only makes sense on tablet */
+        }
+        #stats-caret {
+          display: none;
+        }
+        .modal-x {
+          display: inline-flex;
+        }
+
+        #dealer,
+        #mobile-actions {
+          flex-wrap: wrap;
+        }
+        .ghost {
+          padding: 10px;
+          font-size: 12px;
+        }
+
+        #spin {
+          font-size: 17px;
+          padding: 12px 30px;
+        }
+        #settings-btn {
+          width: 42px;
+          height: 42px;
+          font-size: 18px;
+        }
+      }
+
       @media (prefers-reduced-motion: reduce) {
         .tile,
         #result-box {
@@ -443,13 +568,24 @@
         <div id="result-props"></div>
       </section>
 
+      <div id="mobile-actions">
+        <button id="history-btn" class="ghost">Previous</button>
+        <button id="stats-btn" class="ghost">Stats</button>
+      </div>
+
       <section id="history-box" class="tile">
-        <div class="box-title">Previous</div>
+        <div class="box-head">
+          <div class="box-title">Previous</div>
+          <button id="history-close" class="modal-x" aria-label="Close">✕</button>
+        </div>
         <div id="history-list"></div>
       </section>
 
       <section id="stats-box" class="tile collapsed">
-        <button id="stats-toggle"><span>Session Stats</span><span id="stats-caret">▸</span></button>
+        <div class="box-head">
+          <button id="stats-toggle"><span>Session Stats</span><span id="stats-caret">▸</span></button>
+          <button id="stats-close" class="modal-x" aria-label="Close">✕</button>
+        </div>
         <div id="stats-body"></div>
       </section>
 
@@ -458,6 +594,8 @@
         <button id="reset" class="ghost danger">Reset</button>
       </div>
     </aside>
+
+    <div id="mobile-backdrop" class="hidden"></div>
 
     <div id="controls">
       <button id="spin">SPIN</button>
